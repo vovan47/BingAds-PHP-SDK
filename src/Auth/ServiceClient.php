@@ -102,7 +102,7 @@ class ServiceClient
 		return '<long>' . $longVal . '</long>';
 	}
 
-	public function __construct($serviceClientType, $authorizationData, $apiEnvironment)
+	public function __construct($serviceClientType, $authorizationData, $apiEnvironment, $extraSoapOptions = [])
 	{
 		// The sandbox environment is used unless the Production environment is explicitly set.
         
@@ -122,7 +122,7 @@ class ServiceClient
         $this->apiEnvironment = $apiEnvironment;
 		$this->namespace = $this->serviceClientNamespaces[$serviceClientType];
 
-		$this->SetAuthorizationData($authorizationData);
+		$this->SetAuthorizationData($authorizationData, $extraSoapOptions);
 		
 		return $this;
 	}
@@ -162,7 +162,7 @@ class ServiceClient
     /** 
      * Set the authentication headers that should be used in calls to the Bing Ads web services. 
      */ 
-	public function SetAuthorizationData($authorizationData) {
+	public function SetAuthorizationData($authorizationData, $extraSoapClientOptions = []) {
 		if(!isset($authorizationData))
 		{
 			throw new Exception("AuthorizationData is not set.");
@@ -194,10 +194,13 @@ class ServiceClient
         $this->accountId = $authorizationData->AccountId;
 		$this->customerId = $authorizationData->CustomerId;
 
-		$this->RefreshServiceProxy();
+		$this->RefreshServiceProxy($extraSoapClientOptions);
 	}
 
-	private function RefreshServiceProxy()
+    /**
+     * @param array $extraSoapOptions
+     */
+	private function RefreshServiceProxy($extraSoapOptions = [])
 	{
         /** 
          * Define the SOAP headers. 
@@ -245,7 +248,7 @@ class ServiceClient
 		 * To force PHP to always return an array for an array type in the
 		 * response, specify the SOAP_SINGLE_ELEMENT_ARRAYS feature.
          */ 
-		$options = array(
+		$options = [
 			'trace' => TRUE,
 			'exceptions' => TRUE,
 			'features' => SOAP_SINGLE_ELEMENT_ARRAYS,
@@ -256,15 +259,16 @@ class ServiceClient
 			 * Map long type to string type. For details, see
 			 * from_long_xml and to_long_xml callbacks.
 			 */ 
-			'typemap' => array(
-				array(
+			'typemap' => [
+				[
 						'type_ns' => 'http://www.w3.org/2001/XMLSchema',
 						'type_name' => 'xs:long',
 						'to_xml' => 'to_long_xml',
 						'from_xml' => 'from_long_xml'
-				),
-			)
-		);
+				],
+			]
+		];
+		$options = array_merge($options, $extraSoapOptions);
 
 		$proxy = @new SOAPClient($this->wsdlUrl, $options);
 
